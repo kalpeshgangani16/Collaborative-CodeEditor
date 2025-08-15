@@ -31,7 +31,7 @@ app.use('/api/rooms', require('./routes/roomRoutes'));
 // ------------------- SOCKET.IO AUTH -------------------
 io.use(async (socket, next) => {
     try {
-        const token = socket.handshake.auth?.token; // token sent from frontend
+        const token = socket.handshake.auth?.token;
         if (!token) {
             return next(new Error("Authentication error: Token required"));
         }
@@ -42,7 +42,7 @@ io.use(async (socket, next) => {
             return next(new Error("Authentication error: User not found"));
         }
 
-        socket.user = user; // store user in socket object
+        socket.user = user;
         next();
     } catch (err) {
         console.error("Socket Auth Error:", err.message);
@@ -51,36 +51,141 @@ io.use(async (socket, next) => {
 });
 
 // ------------------- SOCKET.IO EVENTS -------------------
-
 const usersInRoom = {};
 
-io.on('connection', (socket) => {
-    socket.on('join-room', async ({ roomId, username }) => {
-        socket.join(roomId);
+// io.on('connection', (socket) => {
+//     socket.on('join-room', async ({ roomId, username }) => {
+//         socket.join(roomId);
 
-        // Track users in room
-        if (!usersInRoom[roomId]) usersInRoom[roomId] = [];
-        usersInRoom[roomId].push({ id: socket.id, username });
+//         if (!usersInRoom[roomId]) usersInRoom[roomId] = [];
+//         const existingUser = usersInRoom[roomId].find(u => u.username === username);
 
-        // Send current users to the joining user
-        const currentUsers = usersInRoom[roomId].map(u => u.username);
-        socket.emit('current-users', currentUsers);
+//         if (!existingUser) {
+//             usersInRoom[roomId].push({ id: socket.id, username });
+//         } else {
+//             existingUser.id = socket.id; // update socket id if reconnected
+//         }
 
-        // Notify others
-        socket.to(roomId).emit('user-joined', username);
+//         // Update MongoDB to include user in the room
+//         await Room.findOneAndUpdate(
+//             { roomId },
+//             { $addToSet: { users: username } }, // add only if not exists
+//             { new: true, upsert: true },
+//         );
+
+//         // Send current users list to the joining user
+//         const currentUsers = usersInRoom[roomId].map(u => u.username);
+//         socket.emit('current-users', currentUsers);
+
+//         // Notify others in room
+//         socket.to(roomId).emit('user-joined', username);
+
+//         // Fetch room code
+//         let room = await Room.findOne({ roomId });
+//         if (!room) {
+//             room = new Room({
+//                 name: "Default Room",
+//                 roomId
+//             });
+//             await room.save();
+//         }
+
+//         socket.emit('code-update', room.code || "hello");
+
+//         socket.on('code-change', async ({ roomId, code }) => {
+//             await Room.findOneAndUpdate({ roomId }, { code });
+//             socket.to(roomId).emit('code-update', code);
+//         });
+//     });
+
+//     socket.on('disconnect', async () => {
+//         for (const roomId in usersInRoom) {
+//             const idx = usersInRoom[roomId].findIndex(u => u.id === socket.id);
+//             if (idx !== -1) {
+//                 const [removedUser] = usersInRoom[roomId].splice(idx, 1);
+
+//                 // Notify others
+//                 socket.to(roomId).emit('user-left', removedUser.username);
+
+//                 // Remove from DB as well
+//                 await Room.findOneAndUpdate(
+//                     { roomId },
+//                     { $pull: { users: removedUser.username } }
+//                 );
+
+//                 // Reset code if empty
+//                 if (usersInRoom[roomId].length === 0) {
+//                     await Room.findOneAndUpdate({ roomId }, { code: "hello" });
+//                 }
+//             }
+//         }
+//     });
+// });
+
+
+io.on("connection", (socket) => {
+  socket.on("join-room", async ({ roomId, username, roomName }) => {
+    socket.join(roomId);
+    socket.roomId = roomId;
+
+    // in-memory presence
+    if (!usersInRoom[roomId]) usersInRoom[roomId] = [];
+    const existing = usersInRoom[roomId].find(u => u.username === username);
+    if (existing) existing.id = socket.id;
+    else usersInRoom[roomId].push({ id: socket.id, username });
+
+    // ⬇️ Single upsert: set name only on insert, add user, apply schema defaults
+    const room = await Room.findOneAndUpdate(
+      { roomId },
+      {
+        $setOnInsert: { name: roomName || `Room ${roomId}` },
+        $addToSet: { users: username }
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    // presence to this user + others
+    socket.emit("current-users", usersInRoom[roomId].map(u => u.username));
+    socket.to(roomId).emit("user-joined", username);
+
+    // send latest code (schema default already applied on first insert)
+    socket.emit("code-update", room.code);
+
+    // code editing
+    socket.on("code-change", async ({ roomId, code }) => {
+      await Room.findOneAndUpdate({ roomId }, { code });
+      socket.to(roomId).emit("code-update", code);
     });
+  });
 
-    socket.on('disconnect', () => {
-        for (const roomId in usersInRoom) {
-            const userIndex = usersInRoom[roomId].findIndex(u => u.id === socket.id);
-            if (userIndex !== -1) {
-                const [removedUser] = usersInRoom[roomId].splice(userIndex, 1);
-                // Notify others in the room
-                socket.to(roomId).emit('user-left', removedUser.username);
-            }
-        }
-    });
+  socket.on("disconnect", async () => {
+    const roomId = socket.roomId;
+    if (!roomId || !usersInRoom[roomId]) return;
+
+    const idx = usersInRoom[roomId].findIndex(u => u.id === socket.id);
+    if (idx === -1) return;
+
+    const [removedUser] = usersInRoom[roomId].splice(idx, 1);
+    socket.to(roomId).emit("user-left", removedUser.username);
+
+    // keep DB in sync
+    await Room.findOneAndUpdate(
+      { roomId },
+      { $pull: { users: removedUser.username } }
+    );
+
+    // if empty room, reset code to schema default
+    if (usersInRoom[roomId].length === 0) {
+      // if you want to use the same default as schema:
+      await Room.findOneAndUpdate(
+        { roomId },
+        { $set: { code: undefined } }, // clears it; reading will use the stored value
+        { new: true }
+      );
+    }
+  });
 });
+
 
 // ------------------- START SERVER -------------------
 const PORT = process.env.PORT || 5000;

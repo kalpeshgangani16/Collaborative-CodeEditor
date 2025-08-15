@@ -3,7 +3,7 @@ import axios from "axios";
 import { io } from "socket.io-client";
 
 const BACKEND_URL = "http://localhost:5000";
-const DEFAULT_ROOM_ID = "myRoom123";
+const DEFAULT_ROOM_ID = "final";
 
 function App() {
   const [username, setUsername] = useState("");
@@ -14,6 +14,7 @@ function App() {
   const [error, setError] = useState("");
   const [loggedIn, setLoggedIn] = useState(false);
   const socketRef = useRef(null);
+  const skipNextUpdate = useRef(false); // prevent loops when we send changes
 
   // Handle login/register and get JWT
   const handleLogin = async () => {
@@ -23,9 +24,8 @@ function App() {
     }
     setError("");
     try {
-      await axios.post(`${BACKEND_URL}/api/users/register`, { username, password });
-    } catch {}
-    try {
+      await axios.post(`${BACKEND_URL}/api/users/register`, { username, password }).catch(() => { });
+
       const res = await axios.post(`${BACKEND_URL}/api/users/login`, { username, password });
       setToken(res.data.token);
       setLoggedIn(true);
@@ -37,27 +37,46 @@ function App() {
   // Connect to socket.io after login
   useEffect(() => {
     if (!token || !loggedIn) return;
+
+    // Fetch initial code from server
+    axios
+      .get(`${BACKEND_URL}/api/rooms/${DEFAULT_ROOM_ID}/code`)
+      .then(res => {
+        setCode(res.data.code || "");
+      })
+      .catch(() => setCode(""));
+
     const socket = io(BACKEND_URL, { auth: { token } });
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      socket.emit("join-room", { roomId: DEFAULT_ROOM_ID, username });
+      socket.emit("join-room", {
+        roomId: DEFAULT_ROOM_ID,
+        username,
+        roomName: "My Cool Room" // or any name you want
+      });
+
+    });
+
+    socket.on("current-users", (userList) => {
+      setUsers([...new Set(userList)]);
     });
 
     socket.on("user-joined", (user) => {
       setUsers((prev) => [...new Set([...prev, user])]);
     });
 
-    socket.on("current-users", (userList) => {
-      setUsers(userList);
+    socket.on("user-left", (leftUser) => {
+      setUsers((prev) => prev.filter(u => u !== leftUser));
     });
 
-    socket.on("user-left", (username) => {
-      setUsers((prev) => prev.filter(u => u !== username));
-    });
-
+    // Receive code changes from others
     socket.on("code-update", (newCode) => {
-      setCode(newCode);
+      if (!skipNextUpdate.current) {
+        setCode(newCode);
+      } else {
+        skipNextUpdate.current = false; // reset after skipping self-update
+      }
     });
 
     return () => socket.disconnect();
@@ -65,9 +84,11 @@ function App() {
 
   // Send code changes
   const handleCodeChange = (e) => {
-    setCode(e.target.value);
+    const newCode = e.target.value;
+    setCode(newCode);
+    skipNextUpdate.current = true; // prevent own broadcast from coming back
     if (socketRef.current) {
-      socketRef.current.emit("code-change", { roomId: DEFAULT_ROOM_ID, code: e.target.value });
+      socketRef.current.emit("code-change", { roomId: DEFAULT_ROOM_ID, code: newCode });
     }
   };
 
