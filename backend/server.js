@@ -9,16 +9,17 @@ const connectDB = require('./db');
 const User = require('./models/User');
 const Room = require('./models/Room');
 
+
 dotenv.config();
 connectDB();
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
 });
 
 app.use(cors());
@@ -28,26 +29,35 @@ app.use(express.json());
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/rooms', require('./routes/roomRoutes'));
 
+// // helper to read the schema default for Room.code
+// const getDefaultRoomCode = () => {
+//   const path = Room.schema.path('code');
+//   return typeof path.defaultValue === 'function'
+//     ? path.defaultValue()
+//     : path.defaultValue;
+// };
+
+
 // ------------------- SOCKET.IO AUTH -------------------
 io.use(async (socket, next) => {
-    try {
-        const token = socket.handshake.auth?.token;
-        if (!token) {
-            return next(new Error("Authentication error: Token required"));
-        }
-
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await User.findById(decoded.id);
-        if (!user) {
-            return next(new Error("Authentication error: User not found"));
-        }
-
-        socket.user = user;
-        next();
-    } catch (err) {
-        console.error("Socket Auth Error:", err.message);
-        next(new Error("Authentication error"));
+  try {
+    const token = socket.handshake.auth?.token;
+    if (!token) {
+      return next(new Error("Authentication error: Token required"));
     }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return next(new Error("Authentication error: User not found"));
+    }
+
+    socket.user = user;
+    next();
+  } catch (err) {
+    console.error("Socket Auth Error:", err.message);
+    next(new Error("Authentication error"));
+  }
 });
 
 // ------------------- SOCKET.IO EVENTS -------------------
@@ -149,7 +159,13 @@ io.on("connection", (socket) => {
     socket.to(roomId).emit("user-joined", username);
 
     // send latest code (schema default already applied on first insert)
+    // socket.emit("code-update", room.code ?? getDefaultRoomCode());  //if default wewant
     socket.emit("code-update", room.code);
+
+    // also update others so everyone sees the same
+    //******************************** */
+    socket.to(roomId).emit("code-update", room.code);  //remove if error
+    //********************************* */
 
     // code editing
     socket.on("code-change", async ({ roomId, code }) => {
@@ -179,7 +195,8 @@ io.on("connection", (socket) => {
       // if you want to use the same default as schema:
       await Room.findOneAndUpdate(
         { roomId },
-        { $set: { code: undefined } }, // clears it; reading will use the stored value
+        // { $set: { code: getDefaultRoomCode() } },// clears it; by default code 
+        { $set: { code: "//write your code here" } },// clears it; reading will use the stored value
         { new: true }
       );
     }

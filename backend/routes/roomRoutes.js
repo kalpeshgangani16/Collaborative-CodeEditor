@@ -20,12 +20,16 @@ router.get('/:roomId/code', async (req, res) => {
   try {
     const room = await Room.findOne({ roomId: req.params.roomId });
     if (!room) return res.status(404).json({ message: "Room not found" });
-    res.json({ code: room.code });
+
+    const code = room.code || "//write your code here";
+    res.json({ code });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 });
 
+
+// Create room
 // Create room
 router.post('/create', auth, async (req, res) => {
   const { name, roomId } = req.body;
@@ -33,8 +37,8 @@ router.post('/create', auth, async (req, res) => {
     const newRoom = new Room({
       name,
       roomId,
-      users: [req.user.username],
-      code: "" // empty editor at start
+      users: [req.user.username]
+      // No need to set code here, schema default will apply
     });
     await newRoom.save();
     res.status(201).json(newRoom);
@@ -42,6 +46,7 @@ router.post('/create', auth, async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 });
+
 
 // Join room
 router.post("/join", auth, async (req, res) => {
