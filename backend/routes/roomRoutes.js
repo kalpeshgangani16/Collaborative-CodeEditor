@@ -3,9 +3,18 @@ const express = require('express');
 const Room = require('../models/Room');
 const User = require('../models/User'); // add this
 const auth = require('../middleware/auth');
+const router = express.Router();
+  
+  //get rooms
+  router.get('/', async (req, res) => {
+      try {
+          const rooms = await Room.find(); // Exclude password field
+          res.json(rooms);
+      } catch (err) {
+          res.status(500).json({ message: 'Server error' });
+      }
+  });
 
-module.exports = (io) => {
-  const router = express.Router();
 
   // Create room
   router.post('/create', auth, async (req, res) => {
@@ -66,5 +75,4 @@ module.exports = (io) => {
     }
   });
 
-  return router;
-};
+module.exports = router;
