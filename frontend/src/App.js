@@ -109,8 +109,6 @@ const handleLogin = async ({ username, password, roomId, roomName, setError }) =
 };
 
 
-
-
   useEffect(() => {
     if (!token || !loggedIn) return;
 

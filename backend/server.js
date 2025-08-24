@@ -28,6 +28,8 @@ app.use(express.json());
 // Routes
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/rooms', require('./routes/roomRoutes'));
+app.use("/api/execute", require("./routes/executeRoutes"));
+
 
 // // helper to read the schema default for Room.code
 // const getDefaultRoomCode = () => {
@@ -167,6 +169,7 @@ io.on("connection", (socket) => {
     socket.to(roomId).emit("code-update", room.code);  //remove if error
     //********************************* */
 
+    
     // code editing
     socket.on("code-change", async ({ roomId, code }) => {
       await Room.findOneAndUpdate({ roomId }, { code });

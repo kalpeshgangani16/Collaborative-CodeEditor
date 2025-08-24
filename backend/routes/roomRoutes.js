@@ -1,7 +1,7 @@
 // routes/roomRoutes.js
 const express = require('express');
 const Room = require('../models/Room');
-const User = require('../models/User'); // add this
+const User = require('../models/User');
 const auth = require('../middleware/auth');
 const router = express.Router();
 
