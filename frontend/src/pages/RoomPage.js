@@ -1,22 +1,52 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Editor } from "@monaco-editor/react";
 import io from "socket.io-client";
+import axios from "axios";
 import "./RoomPage.css";
 
+// 🔹 Default templates for each language
+const languageTemplates = {
+  63: `// JavaScript (Node.js)
+console.log("Hello World");`,
+
+  71: `# Python 3
+print("Hello World")`,
+
+  62: `// Java
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello World");
+    }
+}`,
+
+  54: `// C++
+#include <iostream>
+using namespace std;
+int main() {
+    cout << "Hello World" << endl;
+    return 0;
+}`,
+
+  50: `// C
+#include <stdio.h>
+int main() {
+    printf("Hello World\\n");
+    return 0;
+}`
+};
 
 function RoomPage({ roomName, users, currentUser, code, onCodeChange, onLeave }) {
   const [output, setOutput] = useState("");
   const [typingUsers, setTypingUsers] = useState([]);
+  const [languageId, setLanguageId] = useState(63); // default Node.js
   const socketRef = useRef(null);
   const editorRef = useRef(null);
 
-  // ✅ Connect to socket + join room
+  // ✅ Connect socket
   useEffect(() => {
     socketRef.current = io("http://localhost:5000");
-
     socketRef.current.emit("join-room", roomName, currentUser);
 
-    // only listen for typing events now
     socketRef.current.on("user-typing", (username) => {
       setTypingUsers((prev) =>
         prev.includes(username) ? prev : [...prev, username]
@@ -31,10 +61,9 @@ function RoomPage({ roomName, users, currentUser, code, onCodeChange, onLeave })
     };
   }, [roomName, currentUser]);
 
-  // ✅ Handle typing events
+  // ✅ Typing event
   const handleEditorMount = (editor) => {
     editorRef.current = editor;
-
     editor.onDidChangeModelContent(() => {
       socketRef.current.emit("user-typing", {
         roomId: roomName,
@@ -44,41 +73,58 @@ function RoomPage({ roomName, users, currentUser, code, onCodeChange, onLeave })
   };
 
   // ✅ Run Code
-  const runCode = () => {
+  const runCode = async () => {
     try {
-      let logs = [];
+      const response = await axios.post("http://localhost:5000/api/execute", {
+        language_id: languageId,
+        source_code: code,
+        stdin: ""
+      });
 
-      const customConsole = {
-        log: (...args) => logs.push(args.join(" ")),
-        warn: (...args) => logs.push("⚠️ " + args.join(" ")),
-        error: (...args) => logs.push("❌ " + args.join(" ")),
-      };
-
-      const sandbox = new Function("console", code);
-      const result = sandbox(customConsole);
-
-      if (logs.length > 0) {
-        if (result !== undefined) {
-          logs.push("Return: " + result);
-        }
-        setOutput(logs.join("\n"));
-      } else {
-        setOutput(
-          result !== undefined ? String(result) : "✅ Code executed (no output)"
-        );
-      }
+      setOutput(
+        response.data.stdout ||
+        response.data.stderr ||
+        "No output"
+      );
     } catch (err) {
-      setOutput("Error: " + err.message);
+      console.error(err);
+      setOutput("❌ Error running code");
     }
   };
 
+  // ✅ Change language → always replace with default template
+  // ✅ Change language → always replace with default template
+  const handleLanguageChange = (e) => {
+    const newLang = Number(e.target.value);
+    setLanguageId(newLang);
+
+    // 🔹 Always set the default template of the selected language
+    onCodeChange(languageTemplates[newLang]);
+
+    // 🔹 Reset output when language changes
+    setOutput("");
+  };
+
+
   return (
     <div className="room-container">
-      {/* Header */}
+      {/* 🔹 Header */}
       <header className="room-header">
-        <div>
-          <h2>{roomName}</h2>
-        </div>
+        <h2>{roomName}</h2>
+
+        {/* 🔹 Language selector at the top */}
+        <select
+          value={languageId}
+          onChange={handleLanguageChange}
+          className="lang-dropdown"
+        >
+          <option value={63}>JavaScript (Node.js)</option>
+          <option value={71}>Python 3</option>
+          <option value={62}>Java</option>
+          <option value={54}>C++</option>
+          <option value={50}>C</option>
+        </select>
+
         <button className="leave-btn" onClick={onLeave}>
           Leave Room
         </button>
@@ -91,7 +137,7 @@ function RoomPage({ roomName, users, currentUser, code, onCodeChange, onLeave })
         </div>
       )}
 
-      {/* Body */}
+      {/* 🔹 Body */}
       <div className="room-body">
         {/* User List */}
         <aside className="user-list">
@@ -103,13 +149,19 @@ function RoomPage({ roomName, users, currentUser, code, onCodeChange, onLeave })
           </ul>
         </aside>
 
-        {/* Editor Area */}
+        {/* Editor + Run Panel */}
         <main className="editor-area">
           <div className="editor-wrapper">
             <Editor
               height="100%"
               theme="vs-dark"
-              defaultLanguage="javascript"
+              language={
+                languageId === 71 ? "python" :
+                  languageId === 62 ? "java" :
+                    languageId === 54 ? "cpp" :
+                      languageId === 50 ? "c" :
+                        "javascript"
+              }
               value={code}
               onChange={(value) => onCodeChange(value || "")}
               onMount={handleEditorMount}
