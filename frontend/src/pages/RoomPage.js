@@ -35,7 +35,7 @@ int main() {
 }`
 };
 
-function RoomPage({ roomName, users, currentUser, code, onCodeChange, onLeave }) {
+function RoomPage({ roomId,roomName, users, currentUser, code, onCodeChange, onLeave }) {
   const [output, setOutput] = useState("");
   const [typingUsers, setTypingUsers] = useState([]);
   const [languageId, setLanguageId] = useState(63); // default Node.js
@@ -110,7 +110,7 @@ function RoomPage({ roomName, users, currentUser, code, onCodeChange, onLeave })
     <div className="room-container">
       {/* 🔹 Header */}
       <header className="room-header">
-        <h2>{roomName}</h2>
+        <h2>{roomName}({roomId})</h2>
 
         {/* 🔹 Language selector at the top */}
         <select

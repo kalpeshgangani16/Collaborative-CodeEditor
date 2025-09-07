@@ -27,7 +27,12 @@ app.use(express.json());
 
 // Routes
 app.use('/api/users', require('./routes/userRoutes'));
-app.use('/api/rooms', require('./routes/roomRoutes'));
+// app.use('/api/rooms', require('./routes/roomRoutes'));
+
+//for socket.io
+const roomRoutes = require('./routes/roomRoutes')(io);
+app.use('/api/rooms', roomRoutes);
+
 app.use("/api/execute", require("./routes/executeRoutes"));
 
 
@@ -150,7 +155,7 @@ io.on("connection", (socket) => {
     const room = await Room.findOneAndUpdate(
       { roomId },
       {
-        $setOnInsert: { name: roomName || `Room ${roomId}` },
+        $setOnInsert: {roomId, name: roomName || `Room ${roomId}` },
         $addToSet: { users: username }
       },
       { new: true, upsert: true, setDefaultsOnInsert: true }

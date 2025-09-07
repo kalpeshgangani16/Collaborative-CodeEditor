@@ -1,27 +1,39 @@
 import React, { useState } from "react";
 import styles from "./LoginForm.module.css"; // CSS Modules
 
-function LoginForm({ onLogin }) {
+function CreateRoomForm({ onCreate }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [roomName, setRoomName] = useState("");
   const [roomId, setRoomId] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (!username || !password || !roomId) {
-      setError("Enter all fields: username, password, and room ID");
+    if (!username || !password || !roomName) {
+      setError("Enter all fields: username, password, and room name");
       return;
     }
     setError("");
 
-    const isConfirmed = window.confirm("Do you want to join this room?");
+    const isConfirmed = window.confirm("Do you want to create this room?");
     if (!isConfirmed) return;
 
     setLoading(true);
 
     try {
-      await onLogin({ username, password, roomId, setError });
+      const res = await onCreate({ username, password, roomName, setError });
+
+      if (res?.roomId) {
+        setRoomId(res.roomId);
+      } else if (error.toLowerCase().includes("user not found")) {
+        const registerConfirm = window.confirm(
+          "User not found — Do you want to register?"
+        );
+        if (registerConfirm) {
+          console.log("Proceed with registration for:", username);
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -29,7 +41,7 @@ function LoginForm({ onLogin }) {
 
   return (
     <div className={styles.loginCard}>
-      <h2>Join a Room</h2>
+      <h2>Create a Room</h2>
 
       <input
         value={username}
@@ -46,20 +58,20 @@ function LoginForm({ onLogin }) {
 
       <input
         type="text"
-        value={roomId}
-        onChange={(e) => setRoomId(e.target.value)}
-        placeholder="Room ID"
+        value={roomName}
+        onChange={(e) => setRoomName(e.target.value)}
+        placeholder="Room Name"
       />
 
       <button onClick={handleSubmit} disabled={loading}>
         {loading && <div className={styles.spinner}></div>}
-        {loading ? " Joining Room..." : "Join Room"}
+        {loading ? " Creating Room..." : "Create Room"}
       </button>
 
       {error && (
         <div
           className={
-            error.toLowerCase().includes("successful")
+            error.toLowerCase().includes("success")
               ? styles.successMessage
               : styles.errorMessage
           }
@@ -67,8 +79,14 @@ function LoginForm({ onLogin }) {
           {error}
         </div>
       )}
+
+      {roomId && (
+        <div className={styles.successMessage}>
+          🎉 Room created! Share this ID: <b>{roomId}</b>
+        </div>
+      )}
     </div>
   );
 }
 
-export default LoginForm;
+export default CreateRoomForm;

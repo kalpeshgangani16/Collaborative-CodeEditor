@@ -70,43 +70,100 @@ function App() {
   //   }
   // };
 
-  
 
-const handleLogin = async ({ username, password, roomId, roomName, setError }) => {
-  try {
-    let res;
+  const handleCreate = async ({ username, password, roomName, setError }) => {
     try {
-      res = await axios.post(`${BACKEND_URL}/api/users/login`, { username, password });
-    } catch (loginErr) {
-      // If backend says user not found (404), ask to register
-      if (loginErr.response?.status === 404) {
-        setError(loginErr.response.data?.message || "User not found");
-        if (window.confirm((loginErr.response.data?.message || "User not found") + " — Do you want to register?")) {
-          await axios.post(`${BACKEND_URL}/api/users/register`, { username, password });
-          setError("Registration successful! Logging you in...");
-          res = await axios.post(`${BACKEND_URL}/api/users/login`, { username, password });
+      let res;
+      try {
+        res = await axios.post(`${BACKEND_URL}/api/users/login`, { username, password });
+      } catch (loginErr) {
+        // If backend says user not found (404), ask to register
+        if (loginErr.response?.status === 404) {
+          setError(loginErr.response.data?.message || "User not found");
+          if (window.confirm((loginErr.response.data?.message || "User not found") + " — Do you want to register?")) {
+            await axios.post(`${BACKEND_URL}/api/users/register`, { username, password });
+            setError("Registration successful! Logging you in...");
+            res = await axios.post(`${BACKEND_URL}/api/users/login`, { username, password });
+          } else {
+            return;
+          }
         } else {
+          // Any other backend error (wrong password, etc.) → show message directly
+          setError(loginErr.response?.data?.message || loginErr.message || "Login failed");
           return;
         }
-      } else {
-        // Any other backend error (wrong password, etc.) → show message directly
-        setError(loginErr.response?.data?.message || loginErr.message || "Login failed");
-        return;
       }
+
+      if (!res) return;
+
+      // ✅ Create room
+      const roomRes = await axios.post(
+        `${BACKEND_URL}/api/rooms/create`,
+        { name: roomName },
+        { headers: { Authorization: `Bearer ${res.data.token}` } }
+      );
+
+      setToken(res.data.token);
+      setLoggedIn(true);
+      setUsername(username);
+      setRoomId(roomRes.data.roomId);
+      setRoomName(roomRes.data.name);
+
+      // ✅ return so CreateRoomForm can show roomId
+      return { roomId: roomRes.data.roomId };
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Room creation failed");
     }
+  };
 
-    if (!res) return; // Stop if login/registration failed
 
-    setToken(res.data.token);
-    setLoggedIn(true);
-    setUsername(username);
-    setRoomId(roomId);
-    setRoomName(roomName);
 
-  } catch (err) {
-    setError(err.response?.data?.message || err.message || "Login failed");
-  }
-};
+
+  const handleLogin = async ({ username, password, roomId, roomName, setError }) => {
+    try {
+      let res;
+      try {
+        res = await axios.post(`${BACKEND_URL}/api/users/login`, { username, password });
+      } catch (loginErr) {
+        // If backend says user not found (404), ask to register
+        if (loginErr.response?.status === 404) {
+          setError(loginErr.response.data?.message || "User not found");
+          if (window.confirm((loginErr.response.data?.message || "User not found") + " — Do you want to register?")) {
+            await axios.post(`${BACKEND_URL}/api/users/register`, { username, password });
+            setError("Registration successful! Logging you in...");
+            res = await axios.post(`${BACKEND_URL}/api/users/login`, { username, password });
+          } else {
+            return;
+          }
+        } else {
+          // Any other backend error (wrong password, etc.) → show message directly
+          setError(loginErr.response?.data?.message || loginErr.message || "Login failed");
+          return;
+        }
+      }
+
+      if (!res) return; // Stop if login/registration failed
+
+      const token = res.data.token;
+
+      // ✅ Now actually join the room
+      const joinRes = await axios.post(
+        `${BACKEND_URL}/api/rooms/join`,
+        { roomId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // joinRes contains { roomId, name, users, code }
+      setToken(token);
+      setLoggedIn(true);
+      setUsername(username);
+      setRoomId(joinRes.data.roomId);
+      setRoomName(joinRes.data.name);
+
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Login failed");
+    }
+  };
 
 
   useEffect(() => {
@@ -159,9 +216,11 @@ const handleLogin = async ({ username, password, roomId, roomName, setError }) =
   return (
     <div className="app-container">
       {!loggedIn ? (
-        <LoginPage onLogin={handleLogin} />
+        <LoginPage onLogin={handleLogin} onCreate={handleCreate} />
+
       ) : (
         <RoomPage
+          roomId={roomId}
           roomName={roomName}
           users={users}
           code={code}
