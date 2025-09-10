@@ -23,7 +23,7 @@ module.exports = (io) => {
       const room = await Room.findOne({ roomId: req.params.roomId });
       if (!room) return res.status(404).json({ message: "Room not found" });
 
-      res.json({ code: room.code  });
+      res.json({ code: room.code });
     } catch (err) {
       res.status(500).json({ message: "Server error" });
     }
@@ -33,6 +33,11 @@ module.exports = (io) => {
   router.post('/create', auth, async (req, res) => {
     const { name } = req.body;
     try {
+      const existingRoom = await Room.findOne({ name });
+      if (existingRoom) {
+        return res.status(400).json({ message: "Room name already taken" });
+      }
+
       const roomId = Math.floor(100000 + Math.random() * 900000).toString();
       const newRoom = new Room({
         name,

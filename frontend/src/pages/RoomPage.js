@@ -5,35 +5,8 @@ import axios from "axios";
 import "./RoomPage.css";
 
 // 🔹 Default templates for each language
-const languageTemplates = {
-  63: `// JavaScript (Node.js)
-console.log("Hello World");`,
+import languageTemplates from "../utils/languageTemplates";
 
-  71: `# Python 3
-print("Hello World")`,
-
-  62: `// Java
-public class Main {
-    public static void main(String[] args) {
-        System.out.println("Hello World");
-    }
-}`,
-
-  54: `// C++
-#include <iostream>
-using namespace std;
-int main() {
-    cout << "Hello World" << endl;
-    return 0;
-}`,
-
-  50: `// C
-#include <stdio.h>
-int main() {
-    printf("Hello World\\n");
-    return 0;
-}`
-};
 
 function RoomPage({ roomId,roomName, users, currentUser, code, onCodeChange, onLeave }) {
   const [output, setOutput] = useState("");

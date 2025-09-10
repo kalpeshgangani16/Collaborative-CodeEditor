@@ -89,7 +89,7 @@ function App() {
           }
         } else {
           // Any other backend error (wrong password, etc.) → show message directly
-          setError(loginErr.response?.data?.message || loginErr.message || "Login failed");
+          setError(loginErr.response?.data?.message  || "Room Creation failed");
           return;
         }
       }
