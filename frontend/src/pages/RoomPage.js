@@ -1,51 +1,32 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Editor } from "@monaco-editor/react";
-import io from "socket.io-client";
 import axios from "axios";
 import "./RoomPage.css";
 
-// 🔹 Default templates for each language
-import languageTemplates from "../utils/languageTemplates";
-
-
-function RoomPage({ roomId,roomName, users, currentUser, code, onCodeChange, onLeave }) {
+function RoomPage({
+  roomId, roomName, users, currentUser, code,
+  messages, typingUsers, onCodeChange,
+  onSendMessage, onTyping, onLeave, languageId
+}) {
   const [output, setOutput] = useState("");
-  const [typingUsers, setTypingUsers] = useState([]);
-  const [languageId, setLanguageId] = useState(63); // default Node.js
-  const socketRef = useRef(null);
-  const editorRef = useRef(null);
+  const [newMessage, setNewMessage] = useState("");
+  const [panelHeight, setPanelHeight] = useState(200);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const panelRef = useRef(null);
+  const chatEndRef = useRef(null);
+  const isResizing = useRef(false);
 
-  // ✅ Connect socket
   useEffect(() => {
-    socketRef.current = io("http://localhost:5000");
-    socketRef.current.emit("join-room", roomName, currentUser);
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-    socketRef.current.on("user-typing", (username) => {
-      setTypingUsers((prev) =>
-        prev.includes(username) ? prev : [...prev, username]
-      );
-      setTimeout(() => {
-        setTypingUsers((prev) => prev.filter((u) => u !== username));
-      }, 1500);
-    });
-
-    return () => {
-      socketRef.current.disconnect();
-    };
-  }, [roomName, currentUser]);
-
-  // ✅ Typing event
-  const handleEditorMount = (editor) => {
-    editorRef.current = editor;
-    editor.onDidChangeModelContent(() => {
-      socketRef.current.emit("user-typing", {
-        roomId: roomName,
-        username: currentUser,
-      });
-    });
+  const sendMessage = () => {
+    if (newMessage.trim()) {
+      onSendMessage(newMessage);
+      setNewMessage("");
+    }
   };
 
-  // ✅ Run Code
   const runCode = async () => {
     try {
       const response = await axios.post("http://localhost:5000/api/execute", {
@@ -53,104 +34,145 @@ function RoomPage({ roomId,roomName, users, currentUser, code, onCodeChange, onL
         source_code: code,
         stdin: ""
       });
-
-      setOutput(
-        response.data.stdout ||
-        response.data.stderr ||
-        "No output"
-      );
-    } catch (err) {
-      console.error(err);
+      setOutput(response.data.stdout || response.data.stderr || "No output");
+    } catch {
       setOutput("❌ Error running code");
     }
   };
 
-  // ✅ Change language → always replace with default template
-  // ✅ Change language → always replace with default template
-  const handleLanguageChange = (e) => {
-    const newLang = Number(e.target.value);
-    setLanguageId(newLang);
-
-    // 🔹 Always set the default template of the selected language
-    onCodeChange(languageTemplates[newLang]);
-
-    // 🔹 Reset output when language changes
-    setOutput("");
+  const getMonacoLanguage = () => {
+    switch (languageId) {
+      case 71: return "python";
+      case 62: return "java";
+      case 54: return "cpp";
+      case 50: return "c";
+      case 63:
+      default: return "javascript";
+    }
   };
 
+  const languageTemplates = {
+    63: { name: "JavaScript" },
+    71: { name: "Python" },
+    62: { name: "Java" },
+    54: { name: "C++" },
+    50: { name: "C" },
+  };
+
+  // ✅ Resize handlers
+  const handleMouseDown = (e) => {
+    isResizing.current = true;
+    e.preventDefault();
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isResizing.current) return;
+    const newHeight = window.innerHeight - e.clientY; // distance from bottom
+    if (newHeight > 40 && newHeight < window.innerHeight * 0.7) {
+      setPanelHeight(newHeight);
+    }
+  };
+
+  const handleMouseUp = () => {
+    isResizing.current = false;
+  };
+
+  useEffect(() => {
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
 
   return (
     <div className="room-container">
-      {/* 🔹 Header */}
       <header className="room-header">
-        <h2>{roomName}({roomId})</h2>
-
-        {/* 🔹 Language selector at the top */}
-        <select
-          value={languageId}
-          onChange={handleLanguageChange}
-          className="lang-dropdown"
-        >
-          <option value={63}>JavaScript (Node.js)</option>
-          <option value={71}>Python 3</option>
-          <option value={62}>Java</option>
-          <option value={54}>C++</option>
-          <option value={50}>C</option>
-        </select>
-
-        <button className="leave-btn" onClick={onLeave}>
-          Leave Room
-        </button>
+        <h2>{roomName} ({roomId})</h2>
+        <div className="language-name">
+          Language: <strong>{languageTemplates[languageId]?.name}</strong>
+        </div>
+        <div className="header-actions">
+          <button className="chat-btn" onClick={() => setIsChatOpen(true)}>💬 Chat</button>
+          <button className="leave-btn" onClick={onLeave}>Leave Room</button>
+        </div>
       </header>
 
-      {/* Typing Indicator */}
       {typingUsers.length > 0 && (
         <div className="typing-indicator">
           {typingUsers.join(", ")} {typingUsers.length > 1 ? "are" : "is"} typing...
         </div>
       )}
 
-      {/* 🔹 Body */}
       <div className="room-body">
-        {/* User List */}
+        {/* User list */}
         <aside className="user-list">
           <h3>Users</h3>
-          <ul>
-            {users.map((user, index) => (
-              <li key={index}>{user}</li>
-            ))}
-          </ul>
+          <ul>{users.map((user, i) => (<li key={i}>{user}</li>))}</ul>
         </aside>
 
-        {/* Editor + Run Panel */}
+        {/* Code Editor */}
         <main className="editor-area">
           <div className="editor-wrapper">
             <Editor
               height="100%"
               theme="vs-dark"
-              language={
-                languageId === 71 ? "python" :
-                  languageId === 62 ? "java" :
-                    languageId === 54 ? "cpp" :
-                      languageId === 50 ? "c" :
-                        "javascript"
-              }
+              language={getMonacoLanguage()}
               value={code}
               onChange={(value) => onCodeChange(value || "")}
-              onMount={handleEditorMount}
+              onMount={(editor) => editor.onDidChangeModelContent(onTyping)}
             />
           </div>
 
-          {/* Run + Output Panel */}
-          <div className="run-panel">
-            <button className="run-btn" onClick={runCode}>
-              ▶ Run
-            </button>
+          {/* ✅ Resizable Run Panel */}
+          <div className="run-panel" ref={panelRef} style={{ height: `${panelHeight}px` }}>
+            <div className="resize-handle" onMouseDown={handleMouseDown}></div>
+            <button className="run-btn" onClick={runCode}>▶ Run</button>
             <h3>Output:</h3>
             <pre className="output">{output}</pre>
           </div>
         </main>
       </div>
+
+      {/* ✅ Fullscreen Chat Modal */}
+      {isChatOpen && (
+        <div className="chat-overlay">
+          <div className="chat-box">
+            <header className="chat-header">
+              <h3>Group Chat</h3>
+              <button className="close-btn" onClick={() => setIsChatOpen(false)}>✖</button>
+            </header>
+            <div className="chat-messages">
+              {messages.map((msg, i) => {
+                const time = new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                return (
+                  <div key={i} className={`chat-message ${msg.sender === currentUser ? "own" : "other"}`}>
+                    {msg.sender !== currentUser && (
+                      <div className="chat-username">{msg.sender}</div>
+                    )}
+                    <div className="chat-bubble">
+                      {msg.text}
+                      <span className="chat-time">{time}</span>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={chatEndRef}></div>
+            </div>
+            <div className="chat-input">
+              <input
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="Type a message..."
+                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              />
+              <button onClick={sendMessage}>Send</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

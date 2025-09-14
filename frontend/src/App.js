@@ -1,16 +1,20 @@
+// frontend/src/App.js
 import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { io } from "socket.io-client";
-import LoginPage from "./pages/LoginPage"; // No CSS imported here
+import LoginPage from "./pages/LoginPage";
 import RoomPage from "./pages/RoomPage";
-import { Editor } from "@monaco-editor/react";
 
+//url of backend
 const BACKEND_URL = "http://localhost:5000";
 
 function App() {
+  const [languageId, setLanguageId] = useState(63);
   const [token, setToken] = useState("");
   const [code, setCode] = useState("");
   const [users, setUsers] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [typingUsers, setTypingUsers] = useState([]);
   const [loggedIn, setLoggedIn] = useState(false);
 
   const [username, setUsername] = useState("");
@@ -19,153 +23,101 @@ function App() {
 
   const socketRef = useRef(null);
   const skipNextUpdate = useRef(false);
+  const typingTimeouts = useRef({});
 
-  // const handleLogin = async ({ username, password, roomId, roomName, setError }) => {
-  //   try {
-  //     await axios.post(`${BACKEND_URL}/api/users/register`, { username, password }).catch(() => {});
-  //     const res = await axios.post(`${BACKEND_URL}/api/users/login`, { username, password });
-
-  //     setToken(res.data.token);
-  //     setLoggedIn(true);
-  //     setUsername(username);
-  //     setRoomId(roomId);
-  //     setRoomName(roomName);
-  //   } catch (err) {
-  //     setError("Login failed: " + (err.response?.data?.message || err.message));
-  //   }
-  // };
-
-  // const handleLogin = async ({ username, password, roomId, roomName, setError }) => {
-  //   try {
-  //     let res;
-  //     try {
-  //       res = await axios.post(`${BACKEND_URL}/api/users/login`, { username, password });
-  //     } catch (loginErr) {
-  //       if (loginErr.response?.status === 404) {
-  //         // Ask to register
-  //         if (window.confirm("User not found. Do you want to register?")) {
-  //           await axios.post(`${BACKEND_URL}/api/users/register`, { username, password });
-  //           res = await axios.post(`${BACKEND_URL}/api/users/login`, { username, password });
-  //         } else {
-  //           return; // stop here
-  //         }
-  //       } else if (loginErr.response?.status === 401) {
-  //         setError("Incorrect password");
-  //         return; // stop here
-  //       } else {
-  //         throw loginErr; // other errors
-  //       }
-  //     }
-
-  //     if (!res) return; // prevent using undefined
-
-  //     setToken(res.data.token);
-  //     setLoggedIn(true);
-  //     setUsername(username);
-  //     setRoomId(roomId);
-  //     setRoomName(roomName);
-
-  //   } catch (err) {
-  //     setError("Login failed: " + (err.response?.data?.message || err.message));
-  //   }
-  // };
-
-
-  const handleCreate = async ({ username, password, roomName, setError }) => {
+  // ---------------- CREATE ROOM ----------------
+  const handleCreate = async ({ username, password, roomName, languageId, setError, setSuccess }) => {
     try {
       let res;
       try {
         res = await axios.post(`${BACKEND_URL}/api/users/login`, { username, password });
       } catch (loginErr) {
-        // If backend says user not found (404), ask to register
         if (loginErr.response?.status === 404) {
-          setError(loginErr.response.data?.message || "User not found");
-          if (window.confirm((loginErr.response.data?.message || "User not found") + " — Do you want to register?")) {
+          setError("");
+          if (window.confirm("User not found. Do you want to register?")) {
             await axios.post(`${BACKEND_URL}/api/users/register`, { username, password });
-            setError("Registration successful! Logging you in...");
+            setSuccess("✅ Registration successful! Logging you in...");
             res = await axios.post(`${BACKEND_URL}/api/users/login`, { username, password });
           } else {
             return;
           }
         } else {
-          // Any other backend error (wrong password, etc.) → show message directly
-          setError(loginErr.response?.data?.message  || "Room Creation failed");
+          setError(loginErr.response?.data?.message || "Login failed");
           return;
         }
       }
 
       if (!res) return;
 
-      // ✅ Create room
       const roomRes = await axios.post(
         `${BACKEND_URL}/api/rooms/create`,
-        { name: roomName },
+        { name: roomName, languageId },
         { headers: { Authorization: `Bearer ${res.data.token}` } }
       );
 
-      setToken(res.data.token);
-      setLoggedIn(true);
-      setUsername(username);
-      setRoomId(roomRes.data.roomId);
-      setRoomName(roomRes.data.name);
+      setSuccess("Room created and logging you in!");
+      setError("");
 
-      // ✅ return so CreateRoomForm can show roomId
-      return { roomId: roomRes.data.roomId };
+      setTimeout(() => {
+        setToken(res.data.token);
+        setLoggedIn(true);
+        setUsername(username);
+        setRoomId(roomRes.data.roomId);
+        setRoomName(roomRes.data.name);
+        setLanguageId(roomRes.data.languageId);
+      }, 1500);
     } catch (err) {
       setError(err.response?.data?.message || err.message || "Room creation failed");
     }
   };
 
-
-
-
-  const handleLogin = async ({ username, password, roomId, roomName, setError }) => {
+  // ---------------- LOGIN + JOIN ROOM ----------------
+  const handleLogin = async ({ username, password, roomId, roomName, setError, setSuccess }) => {
     try {
       let res;
       try {
         res = await axios.post(`${BACKEND_URL}/api/users/login`, { username, password });
       } catch (loginErr) {
-        // If backend says user not found (404), ask to register
         if (loginErr.response?.status === 404) {
-          setError(loginErr.response.data?.message || "User not found");
-          if (window.confirm((loginErr.response.data?.message || "User not found") + " — Do you want to register?")) {
+          setError("");
+          if (window.confirm("User not found. Do you want to register?")) {
             await axios.post(`${BACKEND_URL}/api/users/register`, { username, password });
-            setError("Registration successful! Logging you in...");
+            setSuccess("✅ Registration successful! Logging you in...");
             res = await axios.post(`${BACKEND_URL}/api/users/login`, { username, password });
           } else {
             return;
           }
         } else {
-          // Any other backend error (wrong password, etc.) → show message directly
-          setError(loginErr.response?.data?.message || loginErr.message || "Login failed");
+          setError(loginErr.response?.data?.message || "Login failed");
           return;
         }
       }
 
-      if (!res) return; // Stop if login/registration failed
+      if (!res) return;
 
       const token = res.data.token;
-
-      // ✅ Now actually join the room
       const joinRes = await axios.post(
         `${BACKEND_URL}/api/rooms/join`,
         { roomId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // joinRes contains { roomId, name, users, code }
-      setToken(token);
-      setLoggedIn(true);
-      setUsername(username);
-      setRoomId(joinRes.data.roomId);
-      setRoomName(joinRes.data.name);
-
+      setSuccess("Successfully logged in and joined room!");
+      setError("");
+      setTimeout(() => {
+        setToken(token);
+        setLoggedIn(true);
+        setUsername(username);
+        setRoomId(joinRes.data.roomId);
+        setLanguageId(joinRes.data.languageId);
+        setRoomName(joinRes.data.name);
+      }, 1500);
     } catch (err) {
       setError(err.response?.data?.message || err.message || "Login failed");
     }
   };
 
-
+  // ---------------- SOCKET SETUP ----------------
   useEffect(() => {
     if (!token || !loggedIn) return;
 
@@ -181,18 +133,27 @@ function App() {
       socket.emit("join-room", { roomId, username, roomName });
     });
 
-    socket.on("current-users", (userList) => {
-      setUsers([...new Set(userList)]);
+    // ✅ Chat
+    socket.on("chat-history", (history) => setMessages(history));
+    socket.on("chat-message", (msg) => setMessages((prev) => [...prev, msg]));
+
+    // ✅ Typing
+    socket.on("user-typing", (typingUser) => {
+      if (typingUser === username) return;
+      setTypingUsers((prev) => (prev.includes(typingUser) ? prev : [...prev, typingUser]));
+      if (typingTimeouts.current[typingUser]) clearTimeout(typingTimeouts.current[typingUser]);
+      typingTimeouts.current[typingUser] = setTimeout(() => {
+        setTypingUsers((prev) => prev.filter((u) => u !== typingUser));
+        delete typingTimeouts.current[typingUser];
+      }, 1500);
     });
 
-    socket.on("user-joined", (user) => {
-      setUsers((prev) => [...new Set([...prev, user])]);
-    });
+    // ✅ Users
+    socket.on("current-users", (userList) => setUsers(userList)); // keep exactly what server sends);
+    socket.on("user-joined", (user) => setUsers((prev) => [...new Set([...prev, user])]));
+    socket.on("user-left", (leftUser) => setUsers((prev) => prev.filter((u) => u !== leftUser)));
 
-    socket.on("user-left", (leftUser) => {
-      setUsers((prev) => prev.filter((u) => u !== leftUser));
-    });
-
+    // ✅ Code
     socket.on("code-update", (newCode) => {
       if (!skipNextUpdate.current) {
         setCode(newCode);
@@ -204,8 +165,8 @@ function App() {
     return () => socket.disconnect();
   }, [token, loggedIn, username, roomId, roomName]);
 
-  const handleCodeChange = (e) => {
-    const newCode = e.target.value;
+  // ---------------- CODE CHANGE ----------------
+  const handleCodeChange = (newCode) => {
     setCode(newCode);
     skipNextUpdate.current = true;
     if (socketRef.current) {
@@ -213,35 +174,49 @@ function App() {
     }
   };
 
+  // ---------------- SEND CHAT MESSAGE ----------------
+  const handleSendMessage = (text) => {
+    if (socketRef.current) {
+      socketRef.current.emit("chat-message", { roomId, sender: username, text });
+    }
+  };
+
+  // ---------------- TYPING EVENT ----------------
+  const handleTyping = () => {
+    if (socketRef.current) {
+      socketRef.current.emit("user-typing", username);
+    }
+  };
+
+  // ---------------- RENDER ----------------
   return (
     <div className="app-container">
       {!loggedIn ? (
         <LoginPage onLogin={handleLogin} onCreate={handleCreate} />
-
       ) : (
         <RoomPage
           roomId={roomId}
           roomName={roomName}
           users={users}
           code={code}
-          onCodeChange={(newCode) => {
-            setCode(newCode);
-            skipNextUpdate.current = true;
-            if (socketRef.current) {
-              socketRef.current.emit("code-change", { roomId, code: newCode });
-            }
-          }}
+          languageId={languageId}
+          messages={messages}
+          typingUsers={typingUsers}
+          currentUser={username}
+          onCodeChange={handleCodeChange}
+          onSendMessage={handleSendMessage}
+          onTyping={handleTyping}
           onLeave={() => {
             if (socketRef.current) socketRef.current.disconnect();
             setLoggedIn(false);
             setCode("");
             setUsers([]);
+            setMessages([]);
+            setTypingUsers([]);
           }}
         />
-
       )}
     </div>
-
   );
 }
 

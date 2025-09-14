@@ -6,6 +6,7 @@ function LoginForm({ onLogin }) {
   const [password, setPassword] = useState("");
   const [roomId, setRoomId] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");   // ✅ new success state
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -14,6 +15,7 @@ function LoginForm({ onLogin }) {
       return;
     }
     setError("");
+    setSuccess(""); // clear old success
 
     const isConfirmed = window.confirm("Do you want to join this room?");
     if (!isConfirmed) return;
@@ -21,7 +23,7 @@ function LoginForm({ onLogin }) {
     setLoading(true);
 
     try {
-      await onLogin({ username, password, roomId, setError });
+      await onLogin({ username, password, roomId, setError, setSuccess });
     } finally {
       setLoading(false);
     }
@@ -31,42 +33,17 @@ function LoginForm({ onLogin }) {
     <div className={styles.loginCard}>
       <h2>Join a Room</h2>
 
-      <input
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        placeholder="Username"
-      />
-
-      <input
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder="Password"
-      />
-
-      <input
-        type="text"
-        value={roomId}
-        onChange={(e) => setRoomId(e.target.value)}
-        placeholder="Room ID"
-      />
+      <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" />
+      <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
+      <input type="text" value={roomId} onChange={(e) => setRoomId(e.target.value)} placeholder="Room ID" />
 
       <button onClick={handleSubmit} disabled={loading}>
         {loading && <div className={styles.spinner}></div>}
         {loading ? " Joining Room..." : "Join Room"}
       </button>
 
-      {error && (
-        <div
-          className={
-            error.toLowerCase().includes("successful")
-              ? styles.successMessage
-              : styles.errorMessage
-          }
-        >
-          {error}
-        </div>
-      )}
+      {error && <div className={styles.errorMessage}>{error}</div>}
+      {success && <div className={styles.successMessage}>{success}</div>}
     </div>
   );
 }
