@@ -12,6 +12,7 @@ function RoomPage({
   const [newMessage, setNewMessage] = useState("");
   const [panelHeight, setPanelHeight] = useState(200);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true); // ✅ dark mode state
   const panelRef = useRef(null);
   const chatEndRef = useRef(null);
   const isResizing = useRef(false);
@@ -87,13 +88,19 @@ function RoomPage({
   }, []);
 
   return (
-    <div className="room-container">
+    <div className={`room-container ${isDarkMode ? "dark" : "light"}`}> {/* ✅ theme class */}
       <header className="room-header">
         <h2>{roomName} ({roomId})</h2>
         <div className="language-name">
           Language: <strong>{languageTemplates[languageId]?.name}</strong>
         </div>
         <div className="header-actions">
+          <button
+            className="theme-toggle-btn"
+            onClick={() => setIsDarkMode(!isDarkMode)}
+          >
+            {isDarkMode ? "🌞 Light" : "🌙 Dark"}
+          </button>
           <button className="chat-btn" onClick={() => setIsChatOpen(true)}>💬 Chat</button>
           <button className="leave-btn" onClick={onLeave}>Leave Room</button>
         </div>
@@ -117,7 +124,7 @@ function RoomPage({
           <div className="editor-wrapper">
             <Editor
               height="100%"
-              theme="vs-dark"
+              theme={isDarkMode ? "vs-dark" : "light"} // ✅ theme toggle
               language={getMonacoLanguage()}
               value={code}
               onChange={(value) => onCodeChange(value || "")}
