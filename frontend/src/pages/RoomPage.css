@@ -139,17 +139,18 @@
   resize: none;
   position: relative;
 }
-.run-btn {
-  background: #28a745;
-  border: none;
-  padding: 10px 10px;
-  color: white;
+.run-btn,
+.clear-btn {
+  padding: 8px 14px;
+  color: rgb(15, 15, 15);
   font-size: 13px;
   border-radius: 10px;
   cursor: pointer;
-  margin: 6px;
   width: 80px;
+  border: none;
+  transition: background 0.2s ease;
 }
+
 .run-btn:hover {
   background: #218838;
 }
@@ -193,7 +194,7 @@
   cursor: pointer;
 }
 .chat-btn:hover {
-  background: #02375a;
+  background: #41769a;
 }
 
 .chat-overlay {
@@ -320,4 +321,47 @@
 }
 .chat-input button:hover {
   background: #3b5bdb;
+}
+
+/*download file*/
+.download-btn {
+  margin-left: 8px;
+  padding: 6px 12px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.download-btn:hover {
+  background-color: #43a047;
+}
+
+
+/*side bar move*/
+.sidebar-resize-handle {
+  width: 1.5px;
+  cursor: col-resize;
+  background-color: #444;
+  transition: background 0.2s;
+}
+
+.sidebar-resize-handle:hover {
+  background-color: #666;
+}
+
+
+
+/*clearop*/
+/* Run panel actions */
+.run-panel-actions {
+  display: flex;
+  gap: 10px;
+  margin: 6px;
+}
+
+.clear-btn:hover {
+  background: #d32f2f;
 }

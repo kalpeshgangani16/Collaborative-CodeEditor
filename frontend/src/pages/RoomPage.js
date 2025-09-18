@@ -16,6 +16,9 @@ function RoomPage({
   const panelRef = useRef(null);
   const chatEndRef = useRef(null);
   const isResizing = useRef(false);
+  const [sidebarWidth, setSidebarWidth] = useState(200);
+  const isSidebarResizing = useRef(false);
+
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -52,6 +55,31 @@ function RoomPage({
     }
   };
 
+  const getFileExtension = () => {
+    switch (languageId) {
+      case 71: return "py";   // Python
+      case 62: return "java"; // Java
+      case 54: return "cpp";  // C++
+      case 50: return "c";    // C
+      case 63:
+      default: return "js";   // JavaScript
+    }
+  };
+
+  const handleDownload = () => {
+    const extension = getFileExtension();
+    const blob = new Blob([code], { type: "text/plain" });
+    const url = window.URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${roomName || "code"}.${extension}`;
+    link.click();
+
+    window.URL.revokeObjectURL(url);
+  };
+
+
   const languageTemplates = {
     63: { name: "JavaScript" },
     71: { name: "Python" },
@@ -87,6 +115,34 @@ function RoomPage({
     };
   }, []);
 
+  // ✅ Sidebar Resize Handlers
+  const handleSidebarMouseDown = (e) => {
+    isSidebarResizing.current = true;
+    e.preventDefault();
+  };
+
+  const handleSidebarMouseMove = (e) => {
+    if (!isSidebarResizing.current) return;
+    const newWidth = e.clientX; // distance from left
+    if (newWidth > 100 && newWidth < window.innerWidth * 0.5) {
+      setSidebarWidth(newWidth);
+    }
+  };
+
+  const handleSidebarMouseUp = () => {
+    isSidebarResizing.current = false;
+  };
+
+  useEffect(() => {
+    window.addEventListener("mousemove", handleSidebarMouseMove);
+    window.addEventListener("mouseup", handleSidebarMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleSidebarMouseMove);
+      window.removeEventListener("mouseup", handleSidebarMouseUp);
+    };
+  }, []);
+
+
   return (
     <div className={`room-container ${isDarkMode ? "dark" : "light"}`}> {/* ✅ theme class */}
       <header className="room-header">
@@ -102,6 +158,7 @@ function RoomPage({
             {isDarkMode ? "🌞 Light" : "🌙 Dark"}
           </button>
           <button className="chat-btn" onClick={() => setIsChatOpen(true)}>💬 Chat</button>
+          <button className="download-btn" onClick={handleDownload}>⬇ Download</button>
           <button className="leave-btn" onClick={onLeave}>Leave Room</button>
         </div>
       </header>
@@ -114,10 +171,13 @@ function RoomPage({
 
       <div className="room-body">
         {/* User list */}
-        <aside className="user-list">
+        <aside className="user-list" style={{ width: `${sidebarWidth}px` }}>
           <h3>Users</h3>
           <ul>{users.map((user, i) => (<li key={i}>{user}</li>))}</ul>
         </aside>
+
+        {/* Resize handle between sidebar and editor */}
+        <div className="sidebar-resize-handle" onMouseDown={handleSidebarMouseDown}></div>
 
         {/* Code Editor */}
         <main className="editor-area">
@@ -135,7 +195,10 @@ function RoomPage({
           {/* ✅ Resizable Run Panel */}
           <div className="run-panel" ref={panelRef} style={{ height: `${panelHeight}px` }}>
             <div className="resize-handle" onMouseDown={handleMouseDown}></div>
-            <button className="run-btn" onClick={runCode}>▶ Run</button>
+            <div className="run-panel-actions">
+              <button className="run-btn" onClick={runCode}>▶ Run</button>
+              <button className="clear-btn" onClick={() => setOutput("")}>Clear</button>
+            </div>
             <h3>Output:</h3>
             <pre className="output">{output}</pre>
           </div>
