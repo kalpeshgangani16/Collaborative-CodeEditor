@@ -9,7 +9,6 @@ const connectDB = require("./db");
 const User = require("./models/User");
 const Room = require("./models/Room");
 
-
 dotenv.config();
 connectDB();
 
@@ -25,7 +24,7 @@ const io = socketIo(server, {
 app.use(cors());
 app.use(express.json());
 
-// Routes
+// ------------------- ROUTES -------------------
 app.use("/api/users", require("./routes/userRoutes"));
 const roomRoutes = require("./routes/roomRoutes")(io);
 app.use("/api/rooms", roomRoutes);
@@ -146,14 +145,11 @@ io.on("connection", (socket) => {
       { roomId },
       { $pull: { users: removedUser.username }, $set: { lastActive: new Date() } }
     );
-
-    // ⚠️ Notice: We do NOT reset code here anymore ✅
   });
 });
 
 // ------------------- CLEANUP OLD ROOMS -------------------
-// Every midnight, delete rooms inactive for 7 days
-// ✅ Auto-clean old rooms without node-cron
+// Every 24h, delete rooms inactive for 7 days
 setInterval(async () => {
   try {
     console.log("🧹 Running cleanup of inactive rooms...");
@@ -166,8 +162,7 @@ setInterval(async () => {
   } catch (err) {
     console.error("❌ Error during cleanup:", err.message);
   }
-}, 24 * 60 * 60 * 1000); // every 24 hours
-
+}, 24 * 60 * 60 * 1000);
 
 // ------------------- START SERVER -------------------
 const PORT = process.env.PORT || 5000;

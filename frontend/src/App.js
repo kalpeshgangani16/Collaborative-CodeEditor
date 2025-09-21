@@ -1,11 +1,11 @@
-// frontend/src/App.js
 import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { io } from "socket.io-client";
 import LoginPage from "./pages/LoginPage";
 import RoomPage from "./pages/RoomPage";
+import HomePage from "./pages/HomePage"; // new page for Create/Join options
 
-//url of backend
+// Backend URL
 const BACKEND_URL = "http://localhost:5000";
 
 function App() {
@@ -15,7 +15,9 @@ function App() {
   const [users, setUsers] = useState([]);
   const [messages, setMessages] = useState([]);
   const [typingUsers, setTypingUsers] = useState([]);
-  const [loggedIn, setLoggedIn] = useState(false);
+
+  const [loggedIn, setLoggedIn] = useState(false); // after Google login
+  const [inRoom, setInRoom] = useState(false); // after Create/Join room
 
   const [username, setUsername] = useState("");
   const [roomId, setRoomId] = useState("");
@@ -25,101 +27,82 @@ function App() {
   const skipNextUpdate = useRef(false);
   const typingTimeouts = useRef({});
 
-  // ---------------- CREATE ROOM ----------------
-  const handleCreate = async ({ username, password, roomName, languageId, setError, setSuccess }) => {
-    try {
-      let res;
-      try {
-        res = await axios.post(`${BACKEND_URL}/api/users/login`, { username, password });
-      } catch (loginErr) {
-        if (loginErr.response?.status === 404) {
-          setError("");
-          if (window.confirm("User not found. Do you want to register?")) {
-            await axios.post(`${BACKEND_URL}/api/users/register`, { username, password });
-            setSuccess("✅ Registration successful! Logging you in...");
-            res = await axios.post(`${BACKEND_URL}/api/users/login`, { username, password });
-          } else {
-            return;
-          }
-        } else {
-          setError(loginErr.response?.data?.message || "Login failed");
-          return;
-        }
-      }
+  useEffect(() => {
+    const savedToken = localStorage.getItem("token");
+    const savedUser = localStorage.getItem("user");
 
-      if (!res) return;
-
-      const roomRes = await axios.post(
-        `${BACKEND_URL}/api/rooms/create`,
-        { name: roomName, languageId },
-        { headers: { Authorization: `Bearer ${res.data.token}` } }
-      );
-
-      setSuccess("Room created and logging you in!");
-      setError("");
-
-      setTimeout(() => {
-        setToken(res.data.token);
-        setLoggedIn(true);
-        setUsername(username);
-        setRoomId(roomRes.data.roomId);
-        setRoomName(roomRes.data.name);
-        setLanguageId(roomRes.data.languageId);
-      }, 1500);
-    } catch (err) {
-      setError(err.response?.data?.message || err.message || "Room creation failed");
+    if (savedToken && savedUser) {
+      setToken(savedToken);
+      const parsedUser = JSON.parse(savedUser);
+      setUsername(parsedUser.username || "Guest");
+      setLoggedIn(true);
     }
+  }, []);
+
+  // ---------------- GOOGLE LOGIN ----------------
+  const handleGoogleLogin = (jwtToken, user) => {
+    setToken(jwtToken);
+    setUsername(user.username || "Guest");
+    setLoggedIn(true);
+
+    localStorage.setItem("token", jwtToken);
+    localStorage.setItem("user", JSON.stringify(user));
+
   };
 
-  // ---------------- LOGIN + JOIN ROOM ----------------
-  const handleLogin = async ({ username, password, roomId, roomName, setError, setSuccess }) => {
+  // ---------------- LOGOUT ----------------
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setToken("");
+    setUsername("");
+    setLoggedIn(false);
+    setInRoom(false);
+    // 🚫 don't reset code
+    setUsers([]);
+    setMessages([]);
+    setTypingUsers([]);
+  };
+
+  // ---------------- CREATE ROOM ----------------
+  const handleCreateRoom = async (roomNameInput, languageIdInput) => {
     try {
-      let res;
-      try {
-        res = await axios.post(`${BACKEND_URL}/api/users/login`, { username, password });
-      } catch (loginErr) {
-        if (loginErr.response?.status === 404) {
-          setError("");
-          if (window.confirm("User not found. Do you want to register?")) {
-            await axios.post(`${BACKEND_URL}/api/users/register`, { username, password });
-            setSuccess("✅ Registration successful! Logging you in...");
-            res = await axios.post(`${BACKEND_URL}/api/users/login`, { username, password });
-          } else {
-            return;
-          }
-        } else {
-          setError(loginErr.response?.data?.message || "Login failed");
-          return;
-        }
-      }
-
-      if (!res) return;
-
-      const token = res.data.token;
-      const joinRes = await axios.post(
-        `${BACKEND_URL}/api/rooms/join`,
-        { roomId },
+      const res = await axios.post(
+        `${BACKEND_URL}/api/rooms/create`,
+        { name: roomNameInput, languageId: languageIdInput },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setSuccess("Successfully logged in and joined room!");
-      setError("");
-      setTimeout(() => {
-        setToken(token);
-        setLoggedIn(true);
-        setUsername(username);
-        setRoomId(joinRes.data.roomId);
-        setLanguageId(joinRes.data.languageId);
-        setRoomName(joinRes.data.name);
-      }, 1500);
+      setRoomId(res.data.roomId);
+      setRoomName(res.data.name);
+      setLanguageId(res.data.languageId);
+      setInRoom(true);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || "Login failed");
+      alert(err.response?.data?.message || "Room creation failed");
     }
   };
 
-  // ---------------- SOCKET SETUP ----------------
+  // ---------------- JOIN ROOM ----------------
+  const handleJoinRoom = async (roomIdInput) => {
+    try {
+      const res = await axios.post(
+        `${BACKEND_URL}/api/rooms/join`,
+        { roomId: roomIdInput },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setRoomId(res.data.roomId);
+      setRoomName(res.data.name);
+      setLanguageId(res.data.languageId);
+      setInRoom(true);
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to join room");
+    }
+  };
+
+  // ---------------- SOCKET + ROOM HANDLERS ----------------
   useEffect(() => {
-    if (!token || !loggedIn) return;
+    if (!token || !inRoom) return;
 
     axios
       .get(`${BACKEND_URL}/api/rooms/${roomId}/code`)
@@ -133,11 +116,11 @@ function App() {
       socket.emit("join-room", { roomId, username, roomName });
     });
 
-    // ✅ Chat
+    // Chat
     socket.on("chat-history", (history) => setMessages(history));
     socket.on("chat-message", (msg) => setMessages((prev) => [...prev, msg]));
 
-    // ✅ Typing
+    // Typing
     socket.on("user-typing", (typingUser) => {
       if (typingUser === username) return;
       setTypingUsers((prev) => (prev.includes(typingUser) ? prev : [...prev, typingUser]));
@@ -148,12 +131,12 @@ function App() {
       }, 1500);
     });
 
-    // ✅ Users
-    socket.on("current-users", (userList) => setUsers(userList)); // keep exactly what server sends);
+    // Users
+    socket.on("current-users", (userList) => setUsers(userList));
     socket.on("user-joined", (user) => setUsers((prev) => [...new Set([...prev, user])]));
     socket.on("user-left", (leftUser) => setUsers((prev) => prev.filter((u) => u !== leftUser)));
 
-    // ✅ Code
+    // Code
     socket.on("code-update", (newCode) => {
       if (!skipNextUpdate.current) {
         setCode(newCode);
@@ -163,9 +146,9 @@ function App() {
     });
 
     return () => socket.disconnect();
-  }, [token, loggedIn, username, roomId, roomName]);
+  }, [token, inRoom, username, roomId, roomName]);
 
-  // ---------------- CODE CHANGE ----------------
+  // ---------------- HANDLERS ----------------
   const handleCodeChange = (newCode) => {
     setCode(newCode);
     skipNextUpdate.current = true;
@@ -174,14 +157,12 @@ function App() {
     }
   };
 
-  // ---------------- SEND CHAT MESSAGE ----------------
   const handleSendMessage = (text) => {
     if (socketRef.current) {
       socketRef.current.emit("chat-message", { roomId, sender: username, text });
     }
   };
 
-  // ---------------- TYPING EVENT ----------------
   const handleTyping = () => {
     if (socketRef.current) {
       socketRef.current.emit("user-typing", username);
@@ -192,7 +173,9 @@ function App() {
   return (
     <div className="app-container">
       {!loggedIn ? (
-        <LoginPage onLogin={handleLogin} onCreate={handleCreate} />
+        <LoginPage onLogin={handleGoogleLogin} />
+      ) : !inRoom ? (
+        <HomePage username={username} setUsername={setUsername} setToken={setToken} onCreateRoom={handleCreateRoom} onJoinRoom={handleJoinRoom} onLogout={handleLogout} />
       ) : (
         <RoomPage
           roomId={roomId}
@@ -208,7 +191,7 @@ function App() {
           onTyping={handleTyping}
           onLeave={() => {
             if (socketRef.current) socketRef.current.disconnect();
-            setLoggedIn(false);
+            setInRoom(false);
             setCode("");
             setUsers([]);
             setMessages([]);
