@@ -6,120 +6,204 @@
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black)
 ![MongoDB](https://img.shields.io/badge/MongoDB-47A248?logo=mongodb&logoColor=white)
 
-
-👨‍💻 **Welcome, Code Wizard!** Collaborate in real-time, create rooms, and code together with friends or colleagues. Perfect for pair programming and coding interviews.  
+👨‍💻 **Welcome, Code Wizard!**  
+Collaborate in real-time, create rooms, and code together with friends or colleagues. Perfect for **pair programming**, **coding interviews**, and **study groups**.  
 
 ---
 
 ## 🚀 Features
 
-- **User Authentication:** Login & registration flow with secure password handling  
-- **Room Management:** Create or join rooms using a unique Room ID  
-- **Real-Time Collaboration:** Live code updates for all participants using Socket.IO  
-- **Code Editor:** Integrated Monaco Editor with syntax highlighting  
-- **User Feedback:** Clear error & success messages, plus loading indicators  
-- **Fun UI:** Welcome banner for coders and responsive forms  
+- 🔐 **Google Authentication** — Users sign in/up using Google ID  
+- 🆔 **Username System** — Default username is email prefix; can be changed later  
+- 🏠 **Room Management** — Create or join rooms with a **6-digit Room ID**  
+- ⚡ **Real-Time Collaboration** — Instant code sync across all participants using **Socket.IO**  
+- 💬 **Chat Option** — Built-in real-time chat for each room  
+- 🗑️ **Auto Cleanup** — Rooms inactive for **7 days** are automatically deleted  
+- ⏳ **Session Expiry** — Users are auto-logged out after **1 hour**  
+- 📄 **Download Code** — Export code files (`.cpp`, `.c`, `.js` etc.)  
+- 🌙 **Dark/Light Mode** toggle for personalized UI  
+- 📝 **Code Editor** — Integrated **Monaco Editor** with syntax highlighting  
 
 ---
 
 ## 📂 Project Structure
 
-- src/
-  - components/
-    - CreateRoomForm.js  
-    - LoginForm.js  
-    - RoomPage.js  
-  - styles/
-    - index.css  
-    - LoginForm.module.css  
-  - App.js  
-  - index.js  
-- backend/
-  - server.js  
-  - models/
-    - User.js  
-    - Room.js  
-  - routes/
-    - authRoutes.js  
-    - roomRoutes.js  
-  - middleware/
-    - auth.js  
-- .env  
-- package.json  
-- README.md  
+```bash
+collab-coding-app/
+├── backend/                 # Express.js + MongoDB + Socket.IO server
+│   ├── models/
+│   │   ├── Room.js
+│   │   └── User.js
+│   ├── routes/
+│   │   ├── authRoutes.js
+│   │   └── roomRoutes.js
+│   ├── middleware/
+│   │   └── auth.js
+│   ├── utils/
+│   │   └── cleanup.js        # Auto-delete inactive rooms
+│   ├── server.js
+│   ├── package.json
+│   └── .env
+│
+├── src/                     # React frontend
+│   ├── components/
+│   │   ├── CreateRoomForm.js
+│   │   ├── JoinRoomForm.js
+│   │   ├── LoginForm.js
+│   │   ├── RoomPage.js
+│   │   ├── ChatBox.js
+│   │   └── ThemeToggle.js
+│   ├── styles/
+│   │   ├── index.css
+│   │   ├── LoginForm.module.css
+│   │   └── RoomPage.css
+│   ├── utils/
+│   │   ├── languageTemplates.js
+│   │   └── authHelper.js
+│   ├── App.js
+│   ├── index.js
+│   └── package.json
+│
+├── screenshots/             # App screenshots
+│   ├── login.png
+│   ├── room.png
+│   └── editor.png
+│
+├── README.md
+└── package.json
+```
 
 ---
 
 ## ⚙️ Installation
 
-1. **Clone the repository:**  
-   git clone https://github.com/your-username/collab-coding-app.git  
-   cd collab-coding-app
+### 1. Clone the Repository
+```bash
+git clone https://github.com/kalpeshgangani16/Collaborative-CodeEditor.git
+cd Collaborative-CodeEditor
+```
 
-2. **Install frontend dependencies:**  
-   npm install
+### 2. Frontend Setup
+```bash
+cd src
+npm install
+npm start
+```
 
-3. **Start frontend:**  
-   npm start  
+👉 Open in browser: [http://localhost:3000](http://localhost:3000)
 
-Open in browser: http://localhost:3000
+### 3. Backend Setup
+```bash
+cd backend
+npm install
+```
 
----
+Create a `.env` file in **backend/**:
+```env
+PORT=5000
+MONGO_URI=your_mongo_connection_string
+JWT_SECRET=your_secret_key
+GOOGLE_CLIENT_ID=your_google_client_id
+```
 
-## 🔌 Backend Setup
-
-1. **Navigate to backend folder:**  
-   cd backend  
-   npm install
-
-2. **Create `.env` file** with the following values:  
-   PORT=5000  
-   MONGO_URI=your_mongo_connection_string  
-   JWT_SECRET=your_secret_key
-
-3. **Start backend server:**  
-   npm run dev
+Start the backend:
+```bash
+npm run dev
+```
 
 ---
 
 ## 📝 Usage
 
-1. **Create a Room**  
-   - Enter username, password, and room name  
-   - If user doesn’t exist, register when prompted  
+1. **Login with Google**  
+   - First time → username = email prefix  
+   - User can later update their username  
 
-2. **Join a Room**  
-   - Enter username, password, and Room ID  
-   - Collaborate live with others  
+2. **Create a Room**  
+   - Enter room name → Generates a **6-digit Room ID**  
+   - If a room with the same name exists → error shown  
 
-3. **Code Together!**  
-   - See real-time updates in the editor  
-   - Share Room ID with friends to join  
+3. **Join a Room**  
+   - Enter the **6-digit Room ID** to join  
+   - Multiple users can join the same room  
+
+4. **Code Together**  
+   - Real-time code sync for all users  
+   - Export/download code in `.cpp`, `.c`, or `.js`  
+
+5. **Chat Inside Room**  
+   - Send messages while coding  
+
+6. **Automatic Cleanup**  
+   - Inactive rooms (>7 days) are deleted  
+
+7. **Session Expiry**  
+   - Users auto-logged out after **1 hour**  
 
 ---
 
 ## 🎨 Frontend Highlights
 
-- React with **CSS Modules**  
-- Live **Monaco Editor** for coding  
-- Responsive **forms and banners**  
-- Fun welcome messages for users  
+- ⚛️ Built with **React**  
+- 📝 **Monaco Editor** for collaborative coding  
+- 🌙 Dark/Light mode toggle  
+- 📱 Fully responsive design  
+- 🎨 CSS Modules for scoped styling  
+
+---
+
+## 🛠️ Backend Highlights
+
+- ⚡ **Express.js** + **Socket.IO** for real-time sync  
+- 🗄️ **MongoDB** for persistent storage  
+- 🔑 **JWT Authentication** with session timeout  
+- ♻️ Automatic **inactive room cleanup**  
+- REST APIs for auth & room handling  
 
 ---
 
 ## 🛠️ Future Improvements
 
-- Display list of users inside a room  
-- Support multiple programming languages  
-- Persistent code storage on server  
-- Dark/light mode toggle  
-- Live code execution in editor  
+- 👥 Show list of online users inside a room  
+- 🌍 Add support for more programming languages  
+- 💾 Save multiple file versions per room  
+- ▶️ Live code execution inside editor  
+- 📊 Dashboard for recent activity  
 
 ---
 
 ## 💻 Screenshots
 
-  
+### 🔐 Login Page
+![Login](./screenshots/login.png)
+
+### 🏠 Room Page
+![Room](./screenshots/room.png)
+
+### 📝 Code Editor
+![Editor](./screenshots/editor.png)
+
+---
+
+## 📦 Deployment
+
+### Frontend (Vercel)
+```bash
+cd src
+npm run build
+```
+- Push repo to GitHub  
+- Import into [Vercel](https://vercel.com/)  
+- Deploy 🚀  
+
+### Backend (Render / Heroku)
+```bash
+cd backend
+npm install
+```
+- Create account on [Render](https://render.com/) or [Heroku](https://www.heroku.com/)  
+- Add `MONGO_URI`, `JWT_SECRET`, `GOOGLE_CLIENT_ID` in environment variables  
+- Deploy server 🚀  
 
 ---
 
