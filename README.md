@@ -189,13 +189,13 @@ npm run dev
 ## 💻 Screenshots
 
 ### 🔐 Login Page
-![Login](./screenshots/login.png)
+![Login](./frontend/src/screenshots/login.png)
 
 ### 🏠 Home Page
-![Room](./screenshots/home.png)
+![Room](./frontend/src/screenshots/home.png)
 
 ### 📝 Room Page
-![Editor](./screenshots/room.png)
+![Editor](./frontend/src/screenshots/room.png)
 
 
 
