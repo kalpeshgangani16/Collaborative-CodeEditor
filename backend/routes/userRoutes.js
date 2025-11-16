@@ -7,7 +7,7 @@ const auth = require('../middleware/auth'); // make sure you have this
 const router = express.Router();
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// ---------------- GET ALL USERS ----------------
+//get all user
 router.get('/', async (req, res) => {
     try {
         const users = await User.find({}, { password: 0 });
@@ -17,13 +17,13 @@ router.get('/', async (req, res) => {
     }
 });
 
-// ---------------- GOOGLE LOGIN ----------------
+//google login
 router.post('/google', async (req, res) => {
     try {
         const { token } = req.body;
         if (!token) return res.status(400).json({ message: 'No token provided' });
 
-        // Verify Google token
+        //verify Google token
         const ticket = await client.verifyIdToken({
             idToken: token,
             audience: process.env.GOOGLE_CLIENT_ID,
@@ -32,13 +32,13 @@ router.post('/google', async (req, res) => {
 
         const { sub, email } = payload;
 
-        // Find user by googleId or email
+        //find user by googleId/email
         let user = await User.findOne({ googleId: sub });
         if (!user) {
             user = await User.findOne({ email });
         }
 
-        // Create user if new
+        //create user if new
         if (!user) {
             user = await User.create({
                 googleId: sub,
@@ -47,7 +47,7 @@ router.post('/google', async (req, res) => {
             });
         }
 
-        // Generate JWT
+        //generate JWT
         const jwtToken = jwt.sign(
             { id: user._id, email: user.email, username: user.username },
             process.env.JWT_SECRET,
@@ -68,8 +68,7 @@ router.post('/google', async (req, res) => {
     }
 });
 
-// ---------------- UPDATE USERNAME ----------------
-// ---------------- UPDATE USERNAME ----------------
+//update username
 router.put('/username', auth, async (req, res) => {
     try {
         const { newUsername } = req.body;
@@ -77,7 +76,7 @@ router.put('/username', auth, async (req, res) => {
             return res.status(400).json({ message: 'New username is required' });
         }
 
-        // ensure unique username
+        //ensure unique username
         const existing = await User.findOne({ username: newUsername });
         if (existing) {
             return res.status(400).json({ message: 'Username already taken' });
@@ -91,7 +90,7 @@ router.put('/username', auth, async (req, res) => {
 
         if (!user) return res.status(404).json({ message: "User not found" });
 
-        // ✅ Generate fresh JWT with updated username
+        //generate fresh JWT with updated username
         const newToken = jwt.sign(
             { id: user._id, email: user.email, username: user.username },
             process.env.JWT_SECRET,

@@ -7,7 +7,7 @@ const auth = require('../middleware/auth');
 module.exports = (io) => {
   const router = express.Router();
 
-  // ---------------- Language Templates ----------------
+  //language template
   const languageTemplates = {
     63: `// JavaScript (Node.js)
 console.log("Hello World");`,
@@ -34,7 +34,7 @@ int main() {
 }`
   };
 
-  // ---------------- Get All Rooms ----------------
+  //get all room
   router.get('/', async (req, res) => {
     try {
       const rooms = await Room.find();
@@ -44,7 +44,7 @@ int main() {
     }
   });
 
-  // ---------------- Get Full Room Info ----------------
+  //get room by id
   router.get('/:roomId', async (req, res) => {
     try {
       const room = await Room.findOne({ roomId: req.params.roomId });
@@ -59,7 +59,7 @@ int main() {
         messages: room.messages || []
       });
 
-      // Update last active
+      //update last active
       room.lastActive = new Date();
       await room.save();
     } catch (err) {
@@ -67,7 +67,7 @@ int main() {
     }
   });
 
-  // ---------------- Get Code Only ----------------
+  //get code
   router.get('/:roomId/code', async (req, res) => {
     try {
       const room = await Room.findOne({ roomId: req.params.roomId });
@@ -79,7 +79,7 @@ int main() {
     }
   });
 
-  // ---------------- Save Code (manual REST) ----------------
+  //save
   router.post('/:roomId/save-code', auth, async (req, res) => {
     try {
       const { code } = req.body;
@@ -96,7 +96,7 @@ int main() {
     }
   });
 
-  // ---------------- Get Chat Messages ----------------
+  //get chat
   router.get('/:roomId/messages', async (req, res) => {
     try {
       const room = await Room.findOne({ roomId: req.params.roomId });
@@ -108,7 +108,7 @@ int main() {
     }
   });
 
-  // ---------------- Create Room ----------------
+  //create room
   router.post('/create', auth, async (req, res) => {
     const { name, languageId } = req.body;
     try {
@@ -141,7 +141,7 @@ int main() {
     }
   });
 
-  // ---------------- Join Room ----------------
+  //join
   router.post('/join', auth, async (req, res) => {
     try {
       const { roomId } = req.body;

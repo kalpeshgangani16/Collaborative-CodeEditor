@@ -1,15 +1,18 @@
 /* Whole page layout */
 .homepage-wrapper {
   display: flex;
+  flex-direction: row;
   height: 100vh;
   background: #1e1e2f;
   font-family: Arial, sans-serif;
   color: #fff;
+  overflow: hidden; /* prevent horizontal scroll */
 }
 
 /* Sidebar (profile + room controls) */
 .homepage-sidebar {
   width: 320px;
+  max-width: 80vw; /* responsive on small screens */
   background: #1f2235; /* darker sidebar for better contrast */
   padding: 2rem;
   display: flex;
@@ -17,8 +20,11 @@
   gap: 1rem;
   border-right: 1px solid #2d2f44;
   box-shadow: 2px 0 10px rgba(0,0,0,0.25);
+  flex-shrink: 0; /* don't shrink too much */
+  overflow-y: auto; /* scroll if content is taller than viewport */
 }
 
+/* Texts */
 .title {
   font-size: 1.5rem;
   margin-bottom: 0.5rem;
@@ -63,11 +69,11 @@
 }
 
 .form-section select {
-  appearance: none;          /* removes default arrow */
-  -webkit-appearance: none;  /* for Safari/Chrome */
-  -moz-appearance: none;     /* for Firefox */
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   background: #1e1e2f url("data:image/svg+xml;utf8,<svg fill='white' height='16' viewBox='0 0 24 24' width='16' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>") no-repeat right 10px center;
-  padding-right: 2rem;       /* space for custom arrow */
+  padding-right: 2rem;
   border-radius: 6px;
   border: 1px solid #444;
   color: #fff;
@@ -120,9 +126,10 @@
 /* ----------- Right Panel (Fake Code Editor) ----------- */
 .homepage-editor {
   flex: 1;
-  background: #1e1e2f;
+  min-width: 0; /* important for flex overflow */
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .editor-header {
@@ -132,6 +139,7 @@
   align-items: center;
   gap: 0.5rem;
   border-bottom: 1px solid #333;
+  flex-shrink: 0;
 }
 
 .dot {
@@ -170,6 +178,7 @@
   height: 140px;
   overflow-y: auto;
   box-shadow: inset 0 2px 6px rgba(0,0,0,0.4);
+  flex-shrink: 0;
 }
 
 /* Output Title */
@@ -185,3 +194,30 @@
 .output-log { color: #d1d5db; }   /* default logs */
 .output-success { color: #22c55e; } /* green */
 .output-error { color: #ef4444; }   /* red */
+
+/* ----------------- RESPONSIVE MEDIA QUERIES ----------------- */
+@media (max-width: 1024px) {
+  .homepage-wrapper {
+    flex-direction: column;
+  }
+  .homepage-sidebar {
+    width: 100%;
+    max-width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #2d2f44;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+  }
+  .homepage-editor {
+    min-height: 50vh;
+  }
+}
+
+@media (max-width: 640px) {
+  .form-section input,
+  .form-section select,
+  .form-section button {
+    font-size: 0.9rem;
+    padding: 0.7rem;
+  }
+  .title { font-size: 1.3rem; }
+}
