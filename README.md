@@ -30,47 +30,61 @@ Collaborate in real-time, create rooms, and code together with friends or collea
 
 ```bash
 collab-coding-app/
-├── backend/                 # Express.js + MongoDB + Socket.IO server
+│
+├── backend/                            # Backend (Node.js + Express + MongoDB + Socket.IO)
+│   ├── middleware/
+│   │   └── auth.js                     # JWT or session authentication middleware
+│   │
 │   ├── models/
 │   │   ├── Room.js
 │   │   └── User.js
+│   │
 │   ├── routes/
-│   │   ├── authRoutes.js
-│   │   └── roomRoutes.js
-│   ├── middleware/
-│   │   └── auth.js
-│   ├── utils/
-│   │   └── cleanup.js        # Auto-delete inactive rooms
-│   ├── server.js
+│   │   ├── authRoutes.js               # Handles login/register
+│   │   ├── roomRoutes.js               # Handles room creation/joining
+│   │   └── executeRoutes.js            # Code execution (optional)
+│   │
+│   ├── db.js                           # MongoDB connection
+│   ├── server.js                       # Express + Socket.IO main entry point
+│   ├── test-socket.js                  # (Optional) for socket testing
+│   ├── .env                            # Environment variables (PORT, MONGO_URI, JWT_SECRET, etc.)
+│   ├── .gitignore
 │   ├── package.json
-│   └── .env
+│   └── package-lock.json
 │
-├── src/                     # React frontend
-│   ├── components/
-│   │   ├── CreateRoomForm.js
-│   │   ├── JoinRoomForm.js
-│   │   ├── LoginForm.js
-│   │   ├── RoomPage.js
-│   │   ├── ChatBox.js
-│   │   └── ThemeToggle.js
-│   ├── styles/
-│   │   ├── index.css
-│   │   ├── LoginForm.module.css
-│   │   └── RoomPage.css
-│   ├── utils/
-│   │   ├── languageTemplates.js
-│   │   └── authHelper.js
-│   ├── App.js
-│   ├── index.js
-│   └── package.json
+├── frontend/                           # Frontend (React + Socket.IO client)
+│   ├── public/
+│   │   ├── index.html
+│   │   └── logo.png
+│   │
+│   ├── src/
+│   │   ├── pages/                      # Full-page components
+│   │   │   ├── HomePage.js
+│   │   │   ├── HomePage.css
+│   │   │   ├── LoginPage.js
+│   │   │   ├── LoginPage.css
+│   │   │   ├── RoomPage.js
+│   │   │   └── RoomPage.css
+│   │   │
+│   │   ├── styles/                     # Global and modular styles
+│   │   │   ├── global.css
+│   │   │   ├── index.css
+│   │   │
+│   │   ├── screenshots/                # App screenshots
+│   │   │   ├── login.png
+│   │   │   ├── home.png
+│   │   │   └── room.png
+│   │   │
+│   │   ├── App.js                      # Main app component (React Router)
+│   │   └── index.js                    # React entry point
+│   │
+│   ├── .env
+│   ├── .gitignore
+│   ├── package.json
+│   └── package-lock.json
 │
-├── screenshots/             # App screenshots
-│   ├── login.png
-│   ├── room.png
-│   └── editor.png
-│
-├── README.md
-└── package.json
+└── README.md
+
 ```
 
 ---
@@ -154,7 +168,7 @@ npm run dev
 
 ## 🛠️ Backend Highlights
 
-- ⚡ **Express.js** + **Socket.IO** for real-time sync  
+- ⚡ **Node.js + Express.js** + **Socket.IO** for real-time sync  
 - 🗄️ **MongoDB** for persistent storage  
 - 🔑 **JWT Authentication** with session timeout  
 - ♻️ Automatic **inactive room cleanup**  
@@ -177,33 +191,13 @@ npm run dev
 ### 🔐 Login Page
 ![Login](./screenshots/login.png)
 
-### 🏠 Room Page
-![Room](./screenshots/room.png)
+### 🏠 Home Page
+![Room](./screenshots/home.png)
 
-### 📝 Code Editor
-![Editor](./screenshots/editor.png)
+### 📝 Room Page
+![Editor](./screenshots/room.png)
 
----
 
-## 📦 Deployment
-
-### Frontend (Vercel)
-```bash
-cd src
-npm run build
-```
-- Push repo to GitHub  
-- Import into [Vercel](https://vercel.com/)  
-- Deploy 🚀  
-
-### Backend (Render / Heroku)
-```bash
-cd backend
-npm install
-```
-- Create account on [Render](https://render.com/) or [Heroku](https://www.heroku.com/)  
-- Add `MONGO_URI`, `JWT_SECRET`, `GOOGLE_CLIENT_ID` in environment variables  
-- Deploy server 🚀  
 
 ---
 
