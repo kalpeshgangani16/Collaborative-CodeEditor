@@ -17,6 +17,7 @@ function HomePage({ username, setUsername, setToken, onCreateRoom, onJoinRoom, o
     ];
 
     const handleUsernameChange = async () => {
+        console.log("handleUsernameChange called");
         if (!newUsername.trim()) return alert("Enter a new username!");
         try {
             const token = localStorage.getItem("token");
@@ -119,7 +120,7 @@ function HomePage({ username, setUsername, setToken, onCreateRoom, onJoinRoom, o
                     <span className="file-name">index.js</span>
                 </div>
                 <pre className="editor-code">
-{`function helloWorld() {
+                    {`function helloWorld() {
     console.log("Welcome to CodeCollab!");
 }
 

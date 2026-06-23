@@ -12,7 +12,7 @@ function RoomPage({
   const [newMessage, setNewMessage] = useState("");
   const [panelHeight, setPanelHeight] = useState(200);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true); // ✅ dark mode state
+  const [isDarkMode, setIsDarkMode] = useState(true);
   const chatEndRef = useRef(null);
   const isResizing = useRef(false);  
 
@@ -37,7 +37,7 @@ function RoomPage({
       });
       setOutput(response.data.stdout || response.data.stderr || "No output");
     } catch {
-      setOutput("❌ Error running code");
+      setOutput("Error running code");
     }
   };
 

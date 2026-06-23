@@ -106,5 +106,13 @@ export default function useAuth() {
     }
   }, [token]);
 
-  return { token, loggedIn, username, setUsername, handleGoogleLogin, doLogout };
+  return {
+    token,
+    setToken,
+    loggedIn,
+    username,
+    setUsername,
+    handleGoogleLogin,
+    doLogout,
+  };
 }

@@ -9,8 +9,15 @@ import useSocket from "./app/useSocket";
 import useCodeChatHandlers from "./app/useCodeChatHandlers";
 
 function App() {
-  const { token, loggedIn, username, setUsername, handleGoogleLogin, doLogout } =
-    useAuth();
+  const {
+    token,
+    setToken,
+    loggedIn,
+    username,
+    setUsername,
+    handleGoogleLogin,
+    doLogout,
+  } = useAuth();
 
   const {
     inRoom,
@@ -55,6 +62,7 @@ function App() {
         <HomePage
           username={username}
           setUsername={setUsername}
+          setToken={setToken}
           onCreateRoom={handleCreateRoom}
           onJoinRoom={handleJoinRoom}
           onLogout={doLogout}

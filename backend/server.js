@@ -185,23 +185,30 @@ io.on("connection", (socket) => {
   });
 });
 
-
 // ------------------- AUTO DELETE OLD ROOMS -------------------
-// This runs every 24 hours and deletes rooms inactive for 7 days
-setInterval(async () => {
+
+// Function to delete rooms inactive for more than 7 days
+async function cleanupInactiveRooms() {
   try {
     console.log("Running cleanup of inactive rooms...");
+
     const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-    const result = await Room.deleteMany({ lastActive: { $lt: cutoff } });
+    const result = await Room.deleteMany({
+      lastActive: { $lt: cutoff },
+    });
 
-    if (result.deletedCount > 0) {
-      console.log(`Deleted ${result.deletedCount} inactive rooms`);
-    }
+    console.log(`Deleted ${result.deletedCount} inactive room(s).`);
   } catch (err) {
     console.error("Error during cleanup:", err.message);
   }
-}, 24 * 60 * 60 * 1000);
+}
+
+// Run once immediately when the server starts
+cleanupInactiveRooms();
+
+// Then run every 24 hours
+setInterval(cleanupInactiveRooms, 24 * 60 * 60 * 1000);
 
 
 // ------------------- START SERVER -------------------
